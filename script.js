@@ -6,19 +6,24 @@
 
   let state = { todos: [], filter: 'all' };
 
-  const els = {
-    form: document.getElementById('todo-form'),
-    input: document.getElementById('todo-input'),
-    list: document.getElementById('todo-list'),
-    itemsLeft: document.getElementById('items-left'),
-    filters: Array.from(document.querySelectorAll('.filter')),
-    clearCompleted: document.getElementById('clear-completed'),
-    themeToggle: document.getElementById('theme-toggle'),
-    progressBar: document.getElementById('progress-bar'),
-    progressLabel: document.getElementById('progress-label'),
-    empty: document.getElementById('empty-state'),
+  // Elements will be queried during init so script is robust if included in <head>
+  let els = {};
+
+  function queryEls() {
+    els = {
+      form: document.getElementById('todo-form'),
+      input: document.getElementById('todo-input'),
+      list: document.getElementById('todo-list'),
+      itemsLeft: document.getElementById('items-left'),
+      filters: Array.from(document.querySelectorAll('.filter')),
+      clearCompleted: document.getElementById('clear-completed'),
+      themeToggle: document.getElementById('theme-toggle'),
+      progressBar: document.getElementById('progress-bar'),
+      progressLabel: document.getElementById('progress-label'),
+      empty: document.getElementById('empty-state'),
       themeSwitchCheckbox: document.querySelector('.theme-switch__checkbox'),
-  };
+    };
+  }
 
   function getSystemTheme() {
     try {
@@ -33,18 +38,20 @@
   }
 
   function updateThemeToggleUI() {
-    if (!els.themeToggle) return;
+    if (!els.themeToggle && !els.themeSwitchCheckbox) return;
     const eff = getEffectiveTheme();
     const next = eff === 'dark' ? 'light' : 'dark';
-    els.themeToggle.setAttribute('aria-pressed', eff === 'dark' ? 'true' : 'false');
-    els.themeToggle.textContent = eff === 'dark' ? 'Light mode' : 'Dark mode';
-    els.themeToggle.title = `Switch to ${next} mode`;
+    if (els.themeToggle) {
+      els.themeToggle.setAttribute('aria-pressed', eff === 'dark' ? 'true' : 'false');
+      els.themeToggle.textContent = eff === 'dark' ? 'Light mode' : 'Dark mode';
+      els.themeToggle.title = `Switch to ${next} mode`;
+    }
 
-      // Sync custom theme switch checkbox
-      if (els.themeSwitchCheckbox) {
-        els.themeSwitchCheckbox.checked = eff === 'dark';
-        els.themeSwitchCheckbox.setAttribute('aria-checked', eff === 'dark' ? 'true' : 'false');
-      }
+    // Sync custom theme switch checkbox
+    if (els.themeSwitchCheckbox) {
+      els.themeSwitchCheckbox.checked = eff === 'dark';
+      els.themeSwitchCheckbox.setAttribute('aria-checked', eff === 'dark' ? 'true' : 'false');
+    }
   }
 
   function applyTheme(theme) {
@@ -62,7 +69,8 @@
     if (t === 'light' || t === 'dark') {
       document.documentElement.setAttribute('data-theme', t);
     } else {
-      document.documentElement.setAttribute('data-theme', 'light');
+      // Use system preference when no saved choice exists
+      document.documentElement.setAttribute('data-theme', getSystemTheme());
     }
     updateThemeToggleUI();
   }
@@ -454,25 +462,36 @@
     cleanupDnd();
   }
 
-  // ---------- Event wiring ----------
-  els.form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    addTodo(els.input.value);
-    els.input.value = '';
-    els.input.focus();
-  });
+  // ---------- Event wiring (performed during init) ----------
+  function initEventWiring() {
+    // Ensure elements are queried/reassigned (in case script ran early)
+    queryEls();
 
-  els.filters.forEach(btn => {
-    btn.addEventListener('click', () => setFilter(btn.dataset.filter));
-  });
+    if (els.form) {
+      els.form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        addTodo(els.input.value);
+        if (els.input) {
+          els.input.value = '';
+          els.input.focus();
+        }
+      });
+    }
 
-  els.clearCompleted.addEventListener('click', clearCompleted);
-  if (els.themeToggle) {
-    els.themeToggle.addEventListener('click', () => {
-      const next = getEffectiveTheme() === 'dark' ? 'light' : 'dark';
-      applyTheme(next);
-    });
-  }
+    if (els.filters && els.filters.forEach) {
+      els.filters.forEach(btn => {
+        btn.addEventListener('click', () => setFilter(btn.dataset.filter));
+      });
+    }
+
+    if (els.clearCompleted) els.clearCompleted.addEventListener('click', clearCompleted);
+
+    if (els.themeToggle) {
+      els.themeToggle.addEventListener('click', () => {
+        const next = getEffectiveTheme() === 'dark' ? 'light' : 'dark';
+        applyTheme(next);
+      });
+    }
 
     // Custom theme switch checkbox event
     if (els.themeSwitchCheckbox) {
@@ -484,10 +503,22 @@
       updateThemeToggleUI();
     }
 
-  els.list.addEventListener('dragover', onListDragOver);
-  els.list.addEventListener('drop', onDrop);
+    if (els.list) {
+      els.list.addEventListener('dragover', onListDragOver);
+      els.list.addEventListener('drop', onDrop);
+    }
+  }
 
-  loadTheme();
-  load();
-  render();
+  function init() {
+    initEventWiring();
+    loadTheme();
+    load();
+    render();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();
