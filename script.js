@@ -17,6 +17,7 @@
     progressBar: document.getElementById('progress-bar'),
     progressLabel: document.getElementById('progress-label'),
     empty: document.getElementById('empty-state'),
+      themeSwitchCheckbox: document.querySelector('.theme-switch__checkbox'),
   };
 
   function getSystemTheme() {
@@ -38,6 +39,12 @@
     els.themeToggle.setAttribute('aria-pressed', eff === 'dark' ? 'true' : 'false');
     els.themeToggle.textContent = eff === 'dark' ? 'Light mode' : 'Dark mode';
     els.themeToggle.title = `Switch to ${next} mode`;
+
+      // Sync custom theme switch checkbox
+      if (els.themeSwitchCheckbox) {
+        els.themeSwitchCheckbox.checked = eff === 'dark';
+        els.themeSwitchCheckbox.setAttribute('aria-checked', eff === 'dark' ? 'true' : 'false');
+      }
   }
 
   function applyTheme(theme) {
@@ -59,6 +66,7 @@
     }
     updateThemeToggleUI();
   }
+
 
   function load() {
     try {
@@ -465,6 +473,16 @@
       applyTheme(next);
     });
   }
+
+    // Custom theme switch checkbox event
+    if (els.themeSwitchCheckbox) {
+      els.themeSwitchCheckbox.addEventListener('change', (e) => {
+        const next = els.themeSwitchCheckbox.checked ? 'dark' : 'light';
+        applyTheme(next);
+      });
+      // Sync initial state
+      updateThemeToggleUI();
+    }
 
   els.list.addEventListener('dragover', onListDragOver);
   els.list.addEventListener('drop', onDrop);
